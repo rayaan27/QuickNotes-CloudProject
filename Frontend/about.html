@@ -1,0 +1,521 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>QuickNotes — Architecture & Overview</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet"/>
+<style>
+  :root {
+    --bg:       #080d1a;
+    --surface:  #0f1628;
+    --card:     #151e35;
+    --border:   #1e2d4a;
+    --accent:   #00c9a7;
+    --accent2:  #4f8ef7;
+    --danger:   #f05252;
+    --warning:  #f59e0b;
+    --text:     #e8edf5;
+    --muted:    #5a6a8a;
+    --soft:     #8899bb;
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--bg); color: var(--text);
+    min-height: 100vh; overflow-x: hidden;
+  }
+  body::before {
+    content: '';
+    position: fixed; inset: 0; z-index: 0;
+    background-image:
+      linear-gradient(rgba(79,142,247,.04) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(79,142,247,.04) 1px, transparent 1px);
+    background-size: 48px 48px;
+    pointer-events: none;
+  }
+  nav {
+    position: sticky; top: 0; z-index: 100;
+    backdrop-filter: blur(20px);
+    background: rgba(8,13,26,.85);
+    border-bottom: 1px solid var(--border);
+    padding: 0 2rem; height: 64px;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .nav-brand { display: flex; align-items: center; gap: .75rem; }
+  .nav-logo {
+    width: 36px; height: 36px;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    border-radius: 10px; display: flex; align-items: center; justify-content: center;
+    font-family: 'Syne', sans-serif; font-weight: 800; font-size: 1rem; color: #fff;
+  }
+  .nav-name { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 1.15rem; }
+  .nav-links a {
+    color: var(--soft); text-decoration: none; font-size: .9rem;
+    transition: color .2s; padding: .45rem 1.1rem;
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 8px;
+  }
+  .nav-links a:hover { color: var(--accent); border-color: var(--accent); }
+
+  .page { position: relative; z-index: 1; max-width: 1060px; margin: 0 auto; padding: 3.5rem 2rem 5rem; }
+
+  /* ── HERO ── */
+  .page-hero { text-align: center; margin-bottom: 4rem; }
+  .page-badge {
+    display: inline-flex; align-items: center; gap: .5rem;
+    background: rgba(79,142,247,.1); border: 1px solid rgba(79,142,247,.25);
+    color: var(--accent2); border-radius: 99px;
+    padding: .35rem 1rem; font-size: .8rem; font-weight: 500;
+    margin-bottom: 1.5rem; letter-spacing: .04em;
+  }
+  .page-hero h1 {
+    font-family: 'Syne', sans-serif; font-size: clamp(2rem,5vw,3.2rem);
+    font-weight: 800; line-height: 1.15; letter-spacing: -.02em;
+    background: linear-gradient(135deg, #fff 30%, var(--accent2));
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    margin-bottom: 1rem;
+  }
+  .page-hero p { color: var(--soft); font-size: 1rem; line-height: 1.75; max-width: 580px; margin: 0 auto; font-weight: 300; }
+
+  /* ── SECTION ── */
+  .section { margin-bottom: 3.5rem; }
+  .section-label {
+    font-family: 'Syne', sans-serif; font-size: .72rem;
+    letter-spacing: .14em; text-transform: uppercase;
+    color: var(--accent); font-weight: 600; margin-bottom: .6rem;
+  }
+  .section-title {
+    font-family: 'Syne', sans-serif; font-size: 1.5rem; font-weight: 700;
+    color: var(--text); margin-bottom: 1rem; line-height: 1.2;
+  }
+  .section-desc { color: var(--soft); font-size: .95rem; line-height: 1.75; max-width: 680px; font-weight: 300; }
+
+  /* ── KPI GRID ── */
+  .kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 1rem; margin-top: 1.5rem;
+  }
+  .kpi-card {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 14px; padding: 1.5rem;
+    transition: transform .2s, border-color .2s;
+  }
+  .kpi-card:hover { transform: translateY(-3px); border-color: var(--accent2); }
+  .kpi-num {
+    font-family: 'Syne', sans-serif; font-size: 2.4rem; font-weight: 800;
+    line-height: 1; margin-bottom: .5rem;
+  }
+  .kpi-label { font-size: .82rem; color: var(--muted); line-height: 1.4; }
+  .kpi-sub { font-size: .75rem; color: var(--soft); margin-top: .3rem; }
+
+  /* ── SERVICES GRID ── */
+  .services-grid {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 1rem; margin-top: 1.5rem;
+  }
+  .service-card {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 14px; padding: 1.4rem;
+    display: flex; gap: 1rem; align-items: flex-start;
+    transition: border-color .2s;
+  }
+  .service-card:hover { border-color: var(--accent2); }
+  .service-icon {
+    width: 42px; height: 42px; border-radius: 10px; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.2rem;
+  }
+  .service-name { font-family: 'Syne', sans-serif; font-weight: 600; font-size: .95rem; margin-bottom: .3rem; }
+  .service-desc { font-size: .82rem; color: var(--muted); line-height: 1.55; }
+  .service-tag {
+    display: inline-block; margin-top: .5rem;
+    font-size: .7rem; padding: .2rem .55rem;
+    background: rgba(79,142,247,.1); color: var(--accent2);
+    border-radius: 99px; font-weight: 500;
+  }
+
+  /* ── ARCHITECTURE DIAGRAM ── */
+  .diagram-wrap {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 16px; padding: 2rem;
+    margin-top: 1.5rem; overflow-x: auto;
+  }
+
+  /* ── ENDPOINTS TABLE ── */
+  .endpoints-table {
+    width: 100%; border-collapse: collapse; margin-top: 1.5rem;
+    font-size: .88rem;
+  }
+  .endpoints-table th {
+    background: var(--surface); color: var(--soft);
+    font-size: .75rem; letter-spacing: .06em; text-transform: uppercase;
+    padding: .75rem 1rem; text-align: left; border-bottom: 1px solid var(--border);
+    font-weight: 500;
+  }
+  .endpoints-table td {
+    padding: .85rem 1rem; border-bottom: 1px solid var(--border);
+    vertical-align: middle;
+  }
+  .endpoints-table tr:last-child td { border-bottom: none; }
+  .endpoints-table tr:hover td { background: var(--surface); }
+  .method {
+    display: inline-block; padding: .25rem .65rem; border-radius: 6px;
+    font-weight: 700; font-size: .75rem; letter-spacing: .04em;
+    font-family: 'Syne', sans-serif;
+  }
+  .method-post { background: rgba(0,201,167,.15); color: var(--accent); }
+  .method-get  { background: rgba(79,142,247,.15); color: var(--accent2); }
+  .method-put  { background: rgba(245,158,11,.15); color: var(--warning); }
+  .method-del  { background: rgba(240,82,82,.15);  color: var(--danger); }
+  .endpoint-path { font-family: 'DM Mono', monospace; font-size: .82rem; color: var(--text); }
+  .endpoint-desc { color: var(--muted); font-size: .83rem; }
+
+  /* ── FLOW ── */
+  .flow-wrap {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 16px; padding: 2rem 1.5rem;
+    margin-top: 1.5rem;
+  }
+  .flow {
+    display: flex; align-items: center; flex-wrap: wrap; gap: .5rem;
+    justify-content: center;
+  }
+  .flow-node {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 12px; padding: .75rem 1.1rem;
+    text-align: center; min-width: 110px;
+  }
+  .flow-node-icon { font-size: 1.4rem; margin-bottom: .3rem; }
+  .flow-node-name { font-family: 'Syne', sans-serif; font-size: .8rem; font-weight: 600; color: var(--text); }
+  .flow-node-sub { font-size: .7rem; color: var(--muted); margin-top: .15rem; }
+  .flow-arrow { color: var(--muted); font-size: 1.2rem; flex-shrink: 0; }
+  .flow-label { font-size: .7rem; color: var(--accent2); text-align: center; margin-top: .2rem; }
+
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: var(--bg); }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 99px; }
+
+  @media (max-width: 600px) { .page { padding: 2rem 1rem 4rem; } }
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="nav-brand">
+    <div class="nav-logo">QN</div>
+    <span class="nav-name">QuickNotes</span>
+  </div>
+  <div class="nav-links">
+    <a href="index.html">← Back to App</a>
+  </div>
+</nav>
+
+<div class="page">
+
+  <!-- HERO -->
+  <div class="page-hero">
+    <div class="page-badge">Project Architecture</div>
+    <h1>How QuickNotes works</h1>
+    <p>A fully serverless, event-driven note management system built on six AWS managed services — designed for scalability, zero operational overhead, and production-grade reliability.</p>
+  </div>
+
+  <!-- KPIs -->
+  <section class="section">
+    <div class="section-label">Project KPIs</div>
+    <div class="section-title">By the numbers</div>
+    <div class="section-desc">Key metrics that define the scope and technical depth of the QuickNotes platform.</div>
+    <div class="kpi-grid">
+      <div class="kpi-card">
+        <div class="kpi-num" style="color:var(--accent)">6</div>
+        <div class="kpi-label">AWS Services</div>
+        <div class="kpi-sub">API Gateway · Lambda · DynamoDB · S3 · SNS · CloudWatch</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-num" style="color:var(--accent2)">8</div>
+        <div class="kpi-label">Lambda Functions</div>
+        <div class="kpi-sub">Independent serverless functions — one per operation</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-num" style="color:var(--warning)">9</div>
+        <div class="kpi-label">REST Endpoints</div>
+        <div class="kpi-sub">Full CRUD · Search · File upload & download</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-num" style="color:#a78bfa;font-size:2.4rem">∞</div>
+        <div class="kpi-label">Serverless</div>
+        <div class="kpi-sub">No servers to manage — AWS handles all compute</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-num" style="color:var(--accent)">$0</div>
+        <div class="kpi-label">Monthly Cost</div>
+        <div class="kpi-sub">Within AWS free tier for typical usage</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-num" style="color:var(--accent2);font-size:1.8rem">&lt;50ms</div>
+        <div class="kpi-label">Avg Response Time</div>
+        <div class="kpi-sub">Cold start under 800ms · Warm under 50ms</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- REQUEST FLOW -->
+  <section class="section">
+    <div class="section-label">System Design</div>
+    <div class="section-title">Request lifecycle</div>
+    <div class="section-desc">Every API call travels through the same clean serverless pipeline — from the client to the database and back — in under 100 milliseconds.</div>
+    <div class="flow-wrap">
+      <div class="flow">
+        <div class="flow-node">
+          <div class="flow-node-icon">🌐</div>
+          <div class="flow-node-name">Client</div>
+          <div class="flow-node-sub">Browser / Postman</div>
+        </div>
+        <div>
+          <div class="flow-arrow">→</div>
+          <div class="flow-label">HTTPS + API Key</div>
+        </div>
+        <div class="flow-node" style="border-color:var(--accent2)">
+          <div class="flow-node-icon">🔀</div>
+          <div class="flow-node-name">API Gateway</div>
+          <div class="flow-node-sub">Auth · Routing</div>
+        </div>
+        <div>
+          <div class="flow-arrow">→</div>
+          <div class="flow-label">Proxy event</div>
+        </div>
+        <div class="flow-node" style="border-color:var(--warning)">
+          <div class="flow-node-icon">⚡</div>
+          <div class="flow-node-name">Lambda</div>
+          <div class="flow-node-sub">Business logic</div>
+        </div>
+        <div>
+          <div class="flow-arrow">→</div>
+          <div class="flow-label">Read / Write</div>
+        </div>
+        <div class="flow-node" style="border-color:var(--accent)">
+          <div class="flow-node-icon">🗄</div>
+          <div class="flow-node-name">DynamoDB</div>
+          <div class="flow-node-sub">Notes storage</div>
+        </div>
+      </div>
+      <div style="text-align:center;margin:1.5rem 0;color:var(--muted);font-size:.82rem">
+        ↕ For file operations, Lambda additionally communicates with S3 and SNS
+      </div>
+      <div class="flow" style="justify-content:center;gap:1.5rem">
+        <div class="flow-node" style="border-color:var(--accent);min-width:130px">
+          <div class="flow-node-icon">🪣</div>
+          <div class="flow-node-name">Amazon S3</div>
+          <div class="flow-node-sub">File attachments via pre-signed URLs</div>
+        </div>
+        <div class="flow-node" style="border-color:#f59e0b;min-width:130px">
+          <div class="flow-node-icon">🔔</div>
+          <div class="flow-node-name">SNS</div>
+          <div class="flow-node-sub">Email notification on note creation</div>
+        </div>
+        <div class="flow-node" style="border-color:#f05252;min-width:130px">
+          <div class="flow-node-icon">📊</div>
+          <div class="flow-node-name">CloudWatch</div>
+          <div class="flow-node-sub">Error monitoring & alarms</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ARCHITECTURE DIAGRAM -->
+  <section class="section">
+    <div class="section-label">Architecture Diagram</div>
+    <div class="section-title">Infrastructure overview</div>
+    <div class="section-desc">All components are fully managed by AWS. No EC2 instances, no containers, no servers to patch or maintain.</div>
+    <div class="diagram-wrap">
+      <svg viewBox="0 0 900 420" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-width:900px;display:block;margin:0 auto">
+        <defs>
+          <marker id="arr" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+            <path d="M0,0 L0,6 L8,3 z" fill="#5a6a8a"/>
+          </marker>
+          <marker id="arr-accent" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+            <path d="M0,0 L0,6 L8,3 z" fill="#00c9a7"/>
+          </marker>
+        </defs>
+
+        <!-- Client -->
+        <rect x="20" y="170" width="110" height="80" rx="12" fill="#151e35" stroke="#1e2d4a" stroke-width="1.5"/>
+        <text x="75" y="202" text-anchor="middle" fill="#e8edf5" font-family="Syne" font-size="11" font-weight="700">CLIENT</text>
+        <text x="75" y="218" text-anchor="middle" fill="#5a6a8a" font-family="DM Sans" font-size="9">Browser / Postman</text>
+        <text x="75" y="238" text-anchor="middle" fill="#8899bb" font-family="DM Sans" font-size="20">🌐</text>
+
+        <!-- Arrow: Client → API GW -->
+        <line x1="130" y1="210" x2="185" y2="210" stroke="#5a6a8a" stroke-width="1.5" marker-end="url(#arr)"/>
+        <text x="157" y="204" text-anchor="middle" fill="#5a6a8a" font-family="DM Sans" font-size="8">HTTPS</text>
+        <text x="157" y="215" text-anchor="middle" fill="#5a6a8a" font-family="DM Sans" font-size="8">+ API Key</text>
+
+        <!-- API Gateway -->
+        <rect x="188" y="155" width="120" height="110" rx="12" fill="#151e35" stroke="#4f8ef7" stroke-width="1.5"/>
+        <text x="248" y="183" text-anchor="middle" fill="#e8edf5" font-family="Syne" font-size="11" font-weight="700">API GATEWAY</text>
+        <text x="248" y="200" text-anchor="middle" fill="#5a6a8a" font-family="DM Sans" font-size="9">Auth · Routing</text>
+        <text x="248" y="225" text-anchor="middle" fill="#8899bb" font-family="DM Sans" font-size="22">🔀</text>
+        <text x="248" y="254" text-anchor="middle" fill="#4f8ef7" font-family="DM Sans" font-size="8">REST · API Key</text>
+
+        <!-- Arrow: API GW → Lambda -->
+        <line x1="308" y1="210" x2="365" y2="210" stroke="#5a6a8a" stroke-width="1.5" marker-end="url(#arr)"/>
+        <text x="336" y="204" text-anchor="middle" fill="#5a6a8a" font-family="DM Sans" font-size="8">Proxy</text>
+        <text x="336" y="215" text-anchor="middle" fill="#5a6a8a" font-family="DM Sans" font-size="8">Event</text>
+
+        <!-- Lambda -->
+        <rect x="368" y="145" width="130" height="130" rx="12" fill="#151e35" stroke="#f59e0b" stroke-width="1.5"/>
+        <text x="433" y="172" text-anchor="middle" fill="#e8edf5" font-family="Syne" font-size="11" font-weight="700">AWS LAMBDA</text>
+        <text x="433" y="189" text-anchor="middle" fill="#5a6a8a" font-family="DM Sans" font-size="9">8 Functions</text>
+        <text x="433" y="218" text-anchor="middle" fill="#8899bb" font-family="DM Sans" font-size="22">⚡</text>
+        <text x="433" y="246" text-anchor="middle" fill="#f59e0b" font-family="DM Sans" font-size="8">Python 3.12</text>
+        <text x="433" y="260" text-anchor="middle" fill="#5a6a8a" font-family="DM Sans" font-size="8">Serverless compute</text>
+
+        <!-- Arrow: Lambda → DynamoDB -->
+        <line x1="498" y1="210" x2="555" y2="210" stroke="#5a6a8a" stroke-width="1.5" marker-end="url(#arr)"/>
+        <text x="526" y="204" text-anchor="middle" fill="#5a6a8a" font-family="DM Sans" font-size="8">Read /</text>
+        <text x="526" y="215" text-anchor="middle" fill="#5a6a8a" font-family="DM Sans" font-size="8">Write</text>
+
+        <!-- DynamoDB -->
+        <rect x="558" y="155" width="120" height="110" rx="12" fill="#151e35" stroke="#00c9a7" stroke-width="1.5"/>
+        <text x="618" y="183" text-anchor="middle" fill="#e8edf5" font-family="Syne" font-size="11" font-weight="700">DYNAMODB</text>
+        <text x="618" y="200" text-anchor="middle" fill="#5a6a8a" font-family="DM Sans" font-size="9">Notes table</text>
+        <text x="618" y="225" text-anchor="middle" fill="#8899bb" font-family="DM Sans" font-size="22">🗄</text>
+        <text x="618" y="254" text-anchor="middle" fill="#00c9a7" font-family="DM Sans" font-size="8">NoSQL · Serverless</text>
+
+        <!-- Lambda → S3 (down) -->
+        <line x1="433" y1="275" x2="433" y2="320" stroke="#5a6a8a" stroke-width="1.5" marker-end="url(#arr)"/>
+        <text x="445" y="302" fill="#5a6a8a" font-family="DM Sans" font-size="8">Pre-signed URL</text>
+
+        <!-- S3 -->
+        <rect x="308" y="323" width="120" height="80" rx="12" fill="#151e35" stroke="#00c9a7" stroke-width="1.5"/>
+        <text x="368" y="350" text-anchor="middle" fill="#e8edf5" font-family="Syne" font-size="11" font-weight="700">AMAZON S3</text>
+        <text x="368" y="367" text-anchor="middle" fill="#5a6a8a" font-family="DM Sans" font-size="9">File attachments</text>
+        <text x="368" y="390" text-anchor="middle" fill="#8899bb" font-family="DM Sans" font-size="18">🪣</text>
+
+        <!-- Lambda → SNS -->
+        <line x1="498" y1="250" x2="700" y2="320" stroke="#5a6a8a" stroke-width="1.5" marker-end="url(#arr)"/>
+
+        <!-- SNS -->
+        <rect x="690" y="323" width="110" height="80" rx="12" fill="#151e35" stroke="#f59e0b" stroke-width="1.5"/>
+        <text x="745" y="350" text-anchor="middle" fill="#e8edf5" font-family="Syne" font-size="11" font-weight="700">SNS</text>
+        <text x="745" y="367" text-anchor="middle" fill="#5a6a8a" font-family="DM Sans" font-size="9">Email notifications</text>
+        <text x="745" y="390" text-anchor="middle" fill="#8899bb" font-family="DM Sans" font-size="18">🔔</text>
+
+        <!-- CloudWatch -->
+        <rect x="760" y="155" width="120" height="110" rx="12" fill="#151e35" stroke="#f05252" stroke-width="1.5"/>
+        <text x="820" y="183" text-anchor="middle" fill="#e8edf5" font-family="Syne" font-size="11" font-weight="700">CLOUDWATCH</text>
+        <text x="820" y="200" text-anchor="middle" fill="#5a6a8a" font-family="DM Sans" font-size="9">Monitoring</text>
+        <text x="820" y="225" text-anchor="middle" fill="#8899bb" font-family="DM Sans" font-size="22">📊</text>
+        <text x="820" y="254" text-anchor="middle" fill="#f05252" font-family="DM Sans" font-size="8">Alarms · Logs</text>
+
+        <!-- Lambda → CloudWatch (up arrow) -->
+        <line x1="498" y1="180" x2="758" y2="190" stroke="#5a6a8a" stroke-width="1" stroke-dasharray="4,3" marker-end="url(#arr)"/>
+        <text x="625" y="173" text-anchor="middle" fill="#5a6a8a" font-family="DM Sans" font-size="8">Logs · Metrics</text>
+
+        <!-- IAM note -->
+        <rect x="20" y="323" width="110" height="80" rx="12" fill="#151e35" stroke="#8899bb" stroke-width="1" stroke-dasharray="4,3"/>
+        <text x="75" y="350" text-anchor="middle" fill="#8899bb" font-family="Syne" font-size="11" font-weight="700">IAM</text>
+        <text x="75" y="367" text-anchor="middle" fill="#5a6a8a" font-family="DM Sans" font-size="9">Roles · Policies</text>
+        <text x="75" y="390" text-anchor="middle" fill="#5a6a8a" font-family="DM Sans" font-size="18">🔐</text>
+
+        <!-- Legend -->
+        <text x="20" y="30" fill="#5a6a8a" font-family="DM Sans" font-size="10">━━ Direct call</text>
+        <text x="130" y="30" fill="#5a6a8a" font-family="DM Sans" font-size="10">- - - Monitoring</text>
+      </svg>
+    </div>
+  </section>
+
+  <!-- SERVICES -->
+  <section class="section">
+    <div class="section-label">AWS Services</div>
+    <div class="section-title">What each service does</div>
+    <div class="services-grid">
+      <div class="service-card">
+        <div class="service-icon" style="background:rgba(79,142,247,.15)">🔀</div>
+        <div>
+          <div class="service-name">API Gateway</div>
+          <div class="service-desc">The public entry point for all requests. Validates the API key on every call, routes to the correct Lambda function, and handles CORS so browsers can call the API.</div>
+          <span class="service-tag">REST API · API Key Auth</span>
+        </div>
+      </div>
+      <div class="service-card">
+        <div class="service-icon" style="background:rgba(245,158,11,.15)">⚡</div>
+        <div>
+          <div class="service-name">AWS Lambda</div>
+          <div class="service-desc">8 independent Python functions — one per operation. Each function runs on-demand in milliseconds. No servers to manage, and the first 1M requests per month are free.</div>
+          <span class="service-tag">Python 3.12 · Event-driven</span>
+        </div>
+      </div>
+      <div class="service-card">
+        <div class="service-icon" style="background:rgba(0,201,167,.15)">🗄</div>
+        <div>
+          <div class="service-name">DynamoDB</div>
+          <div class="service-desc">Serverless NoSQL database storing all notes. Each note has a unique UUID as its key, along with title, content, timestamps, and an optional S3 file reference.</div>
+          <span class="service-tag">NoSQL · Auto-scaling</span>
+        </div>
+      </div>
+      <div class="service-card">
+        <div class="service-icon" style="background:rgba(0,201,167,.12)">🪣</div>
+        <div>
+          <div class="service-name">Amazon S3</div>
+          <div class="service-desc">Stores all file attachments privately. Files never pass through Lambda — instead a pre-signed URL is generated, letting clients upload and download directly to S3 securely.</div>
+          <span class="service-tag">Pre-signed URLs · Private bucket</span>
+        </div>
+      </div>
+      <div class="service-card">
+        <div class="service-icon" style="background:rgba(245,158,11,.12)">🔔</div>
+        <div>
+          <div class="service-name">Amazon SNS</div>
+          <div class="service-desc">Sends an email notification every time a new note is created. Lambda publishes to the SNS topic after saving the note to DynamoDB, triggering the email asynchronously.</div>
+          <span class="service-tag">Email alerts · Pub/Sub</span>
+        </div>
+      </div>
+      <div class="service-card">
+        <div class="service-icon" style="background:rgba(240,82,82,.12)">📊</div>
+        <div>
+          <div class="service-name">CloudWatch</div>
+          <div class="service-desc">Monitors all Lambda functions automatically. An alarm is configured to trigger if createNote errors exceed 5 in 1 minute, sending an alert via SNS. All logs are retained.</div>
+          <span class="service-tag">Alarms · Log groups</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ENDPOINTS TABLE -->
+  <section class="section">
+    <div class="section-label">API Reference</div>
+    <div class="section-title">All 9 endpoints</div>
+    <div class="section-desc">Every endpoint is secured with an API key passed in the <code style="color:var(--accent2);font-size:.88em">x-api-key</code> header.</div>
+    <div style="background:var(--card);border:1px solid var(--border);border-radius:14px;overflow:hidden;margin-top:1.5rem">
+      <table class="endpoints-table">
+        <thead>
+          <tr>
+            <th>Method</th>
+            <th>Endpoint</th>
+            <th>Lambda Function</th>
+            <th>Description</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td><span class="method method-post">POST</span></td><td class="endpoint-path">/notes</td><td class="endpoint-desc">createNote</td><td class="endpoint-desc">Create a note. Triggers SNS notification.</td></tr>
+          <tr><td><span class="method method-get">GET</span></td><td class="endpoint-path">/notes</td><td class="endpoint-desc">listNotes</td><td class="endpoint-desc">Return all notes sorted newest first.</td></tr>
+          <tr><td><span class="method method-get">GET</span></td><td class="endpoint-path">/notes/{id}</td><td class="endpoint-desc">getNote</td><td class="endpoint-desc">Fetch a single note by its ID.</td></tr>
+          <tr><td><span class="method method-put">PUT</span></td><td class="endpoint-path">/notes/{id}</td><td class="endpoint-desc">updateNote</td><td class="endpoint-desc">Update title and/or content.</td></tr>
+          <tr><td><span class="method method-del">DELETE</span></td><td class="endpoint-path">/notes/{id}</td><td class="endpoint-desc">deleteNote</td><td class="endpoint-desc">Permanently delete a note.</td></tr>
+          <tr><td><span class="method method-get">GET</span></td><td class="endpoint-path">/notes/search?search=kw</td><td class="endpoint-desc">searchNotes</td><td class="endpoint-desc">Case-insensitive keyword search.</td></tr>
+          <tr><td><span class="method method-get">GET</span></td><td class="endpoint-path">/notes/{id}/upload-url</td><td class="endpoint-desc">getUploadUrl</td><td class="endpoint-desc">Generate pre-signed S3 PUT URL.</td></tr>
+          <tr><td><span class="method method-put">PUT</span></td><td class="endpoint-path">S3 pre-signed URL</td><td class="endpoint-desc">S3 Direct</td><td class="endpoint-desc">Upload file directly to S3.</td></tr>
+          <tr><td><span class="method method-get">GET</span></td><td class="endpoint-path">/notes/{id}/download-url</td><td class="endpoint-desc">getDownloadUrl</td><td class="endpoint-desc">Generate pre-signed S3 GET URL.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <div style="text-align:center;padding-top:2rem;border-top:1px solid var(--border);color:var(--muted);font-size:.82rem">
+    QuickNotes — Cloud Computing Course Project · Built on AWS · 2026
+  </div>
+
+</div>
+</body>
+</html>
